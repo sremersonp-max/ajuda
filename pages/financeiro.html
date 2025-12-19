@@ -1,0 +1,241 @@
+<div class="card">
+    <h2 class="card-title"><i class="fas fa-hand-holding-usd"></i> Gestão Financeira</h2>
+    
+    <div class="form-container">
+        <h4 class="form-section-title">Novo Lançamento Manual</h4>
+        <form id="form-financeiro" onsubmit="handleSalvarLancamento(event)" class="form-grid">
+            <div class="form-group col-span-2">
+                <label>Descrição *</label>
+                <input type="text" id="fin-desc" class="form-control" required placeholder="Ex: Compra de parafusos, Venda para João, etc.">
+            </div>
+            <div class="form-group">
+                <label>Tipo *</label>
+                <select id="fin-tipo" class="form-control">
+                    <option value="Crédito">Entrada (Crédito)</option>
+                    <option value="Débito">Saída (Débito)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Valor (R$) *</label>
+                <input type="number" id="fin-valor" class="form-control" step="0.01" required min="0.01">
+            </div>
+            <div class="form-group">
+                <label>Categoria</label>
+                <select id="fin-categoria" class="form-control">
+                    <option value="">Selecione...</option>
+                    <option value="venda">Venda</option>
+                    <option value="compra">Compra</option>
+                    <option value="despesa">Despesa Operacional</option>
+                    <option value="investimento">Investimento</option>
+                    <option value="outro">Outro</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary" style="align-self: end;">
+                <i class="fas fa-plus-circle"></i> Lançar no Caixa
+            </button>
+        </form>
+    </div>
+
+    <div class="dashboard-grid mb-4">
+        <div class="card stat-card bg-primary-grad">
+            <h3>Saldo Atual em Caixa</h3>
+            <p style="font-size: 2.5rem; font-weight: 800;" id="saldo-caixa">R$ 0,00</p>
+        </div>
+        <div class="card stat-card" style="background: linear-gradient(45deg, #2ecc71, #27ae60);">
+            <h3>Total Entradas</h3>
+            <p style="font-size: 2rem; font-weight: 800;" id="total-entradas">R$ 0,00</p>
+            <small>Últimos 30 dias</small>
+        </div>
+        <div class="card stat-card" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">
+            <h3>Total Saídas</h3>
+            <p style="font-size: 2rem; font-weight: 800;" id="total-saidas">R$ 0,00</p>
+            <small>Últimos 30 dias</small>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 30px;">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Filtrar por Período</label>
+                <select id="filtro-periodo" class="form-control" onchange="filtrarFinanceiro()">
+                    <option value="todos">Todos os lançamentos</option>
+                    <option value="hoje">Hoje</option>
+                    <option value="7dias">Últimos 7 dias</option>
+                    <option value="30dias" selected>Últimos 30 dias</option>
+                    <option value="mes">Este mês</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Filtrar por Tipo</label>
+                <select id="filtro-tipo-fin" class="form-control" onchange="filtrarFinanceiro()">
+                    <option value="todos">Todos</option>
+                    <option value="Crédito">Apenas Entradas</option>
+                    <option value="Débito">Apenas Saídas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Filtrar por Categoria</label>
+                <select id="filtro-categoria-fin" class="form-control" onchange="filtrarFinanceiro()">
+                    <option value="todos">Todas</option>
+                    <option value="venda">Vendas</option>
+                    <option value="compra">Compras</option>
+                    <option value="despesa">Despesas</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="form-section-title">Histórico de Movimentações</h4>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Data/Hora</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Tipo</th>
+                <th class="text-right">Valor</th>
+                <th class="text-right">Ação</th>
+            </tr>
+        </thead>
+        <tbody id="tabela-financeiro">
+            <tr><td colspan="6" class="empty-msg">Carregando...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+// Script específico para a página de financeiro
+document.addEventListener('DOMContentLoaded', async function() {
+    await carregarFinanceiro();
+});
+
+async function carregarFinanceiro() {
+    try {
+        const logs = await LocalDB.getAll('financeiro');
+        await atualizarResumoFinanceiro(logs);
+        await renderFinanceiroComFiltro();
+    } catch (error) {
+        console.error('Erro ao carregar dados financeiros:', error);
+        showNotification('Erro ao carregar dados financeiros', 'error');
+    }
+}
+
+async function atualizarResumoFinanceiro(logs) {
+    // Calcular saldo total
+    const saldoTotal = logs.reduce((acc, curr) => 
+        acc + (curr.tipo === 'Crédito' ? curr.valor : -curr.valor), 0);
+    
+    // Calcular últimos 30 dias
+    const trintaDiasAtras = new Date();
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+    
+    const entradas30Dias = logs
+        .filter(l => new Date(l.data) >= trintaDiasAtras && l.tipo === 'Crédito')
+        .reduce((acc, curr) => acc + curr.valor, 0);
+    
+    const saidas30Dias = logs
+        .filter(l => new Date(l.data) >= trintaDiasAtras && l.tipo === 'Débito')
+        .reduce((acc, curr) => acc + curr.valor, 0);
+    
+    // Atualizar UI
+    document.getElementById('saldo-caixa').textContent = 
+        `R$ ${saldoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    document.getElementById('total-entradas').textContent = 
+        `R$ ${entradas30Dias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    document.getElementById('total-saidas').textContent = 
+        `R$ ${saidas30Dias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+}
+
+async function renderFinanceiroComFiltro(periodo = '30dias', tipo = 'todos', categoria = 'todos') {
+    const logs = await LocalDB.getAll('financeiro');
+    const container = document.getElementById('tabela-financeiro');
+    if(!container) return;
+    
+    // Aplicar filtros
+    let filteredLogs = [...logs].reverse(); // Ordenar do mais recente para o mais antigo
+    
+    // Filtrar por período
+    if (periodo !== 'todos') {
+        const agora = new Date();
+        let dataInicio = new Date();
+        
+        switch(periodo) {
+            case 'hoje':
+                dataInicio.setHours(0, 0, 0, 0);
+                break;
+            case '7dias':
+                dataInicio.setDate(agora.getDate() - 7);
+                break;
+            case '30dias':
+                dataInicio.setDate(agora.getDate() - 30);
+                break;
+            case 'mes':
+                dataInicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+                break;
+        }
+        
+        filteredLogs = filteredLogs.filter(l => new Date(l.data) >= dataInicio);
+    }
+    
+    // Filtrar por tipo
+    if (tipo !== 'todos') {
+        filteredLogs = filteredLogs.filter(l => l.tipo === tipo);
+    }
+    
+    // Filtrar por categoria
+    if (categoria !== 'todos') {
+        filteredLogs = filteredLogs.filter(l => l.categoria === categoria);
+    }
+    
+    if (filteredLogs.length === 0) {
+        container.innerHTML = '<tr><td colspan="6" class="empty-msg">Nenhuma movimentação encontrada.</td></tr>';
+        return;
+    }
+    
+    container.innerHTML = filteredLogs.map(l => {
+        const categoriaCor = l.categoria === 'venda' ? 'var(--success-color)' : 
+                           l.categoria === 'compra' ? 'var(--info-color)' : 
+                           l.categoria === 'despesa' ? 'var(--warning-color)' : '#666';
+        
+        return `<tr>
+            <td>${new Date(l.data).toLocaleString()}</td>
+            <td>${l.descricao}</td>
+            <td>
+                <span class="badge" style="background: ${categoriaCor}; color: white;">
+                    ${l.categoria || 'Não informada'}
+                </span>
+            </td>
+            <td>
+                <span class="badge ${l.tipo === 'Crédito' ? 'badge-success' : 'badge-danger'}">
+                    ${l.tipo}
+                </span>
+            </td>
+            <td class="text-right" style="color: ${l.tipo === 'Crédito' ? '#27ae60' : '#e74c3c'}; font-weight:bold;">
+                R$ ${(l.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </td>
+            <td class="text-right">
+                <button onclick="removerLancamento(${l.id})" class="action-btn delete-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function filtrarFinanceiro() {
+    const periodo = document.getElementById('filtro-periodo').value;
+    const tipo = document.getElementById('filtro-tipo-fin').value;
+    const categoria = document.getElementById('filtro-categoria-fin').value;
+    
+    renderFinanceiroComFiltro(periodo, tipo, categoria);
+}
+
+// Sobrescrever a função global para atualizar resumo
+window.removerLancamento = async function(id) {
+    if(confirm("Excluir este lançamento permanentemente? Isso alterará o saldo.")) {
+        await LocalDB.delete('financeiro', id);
+        await carregarFinanceiro(); // Recarregar tudo
+        showNotification("Lançamento removido!", "success");
+    }
+}
+</script>

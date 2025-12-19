@@ -1,0 +1,41 @@
+modelos.html<div class="card">
+    <h2 class="card-title"><i class="fas fa-layer-group"></i> Engenharia de Modelos (Projetos)</h2>
+    <form id="form-modelo" onsubmit="handleSalvarModelo(event)" class="form-container">
+        <h4 id="form-label-mod" class="form-section-title">Novo Modelo de Produto</h4>
+        <div class="form-grid">
+            <div class="form-group col-span-2">
+                <label>Nome do Projeto (ex: Janela 02 Folhas)</label>
+                <input type="text" id="mod-nome" class="form-control" required placeholder="Digite o nome do produto">
+            </div>
+            <div class="form-group">
+                <label>Código do Modelo</label>
+                <input type="text" id="mod-codigo" class="form-control" placeholder="Ex: JAN-02F">
+            </div>
+        </div>
+        <div class="mt-4">
+            <label style="font-weight: 700;">Estrutura da Receita (L = Largura, H = Altura)</label>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">
+                Exemplos: (L+50)*2 ou (L*H)/1000000 para m² ou apenas 4 para quantidade fixa
+            </p>
+            <div id="recipe-container" class="recipe-container"></div>
+            <button type="button" class="btn-outline btn-dashed" onclick="adicionarLinhaReceita()">
+                <i class="fas fa-plus"></i> Novo Componente
+            </button>
+        </div>
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn-primary" id="btn-save-mod">Gravar Modelo</button>
+            <button type="button" class="btn-outline" onclick="resetModeloForm()" id="btn-cancel-mod" style="display:none">
+                Cancelar Edição
+            </button>
+        </div>
+    </form>
+    <div id="lista-modelos"></div>
+</div>
+
+<script>
+// Script específico para a página de modelos
+document.addEventListener('DOMContentLoaded', async function() {
+    await renderModelos();
+    await adicionarLinhaReceita();
+});
+</script>

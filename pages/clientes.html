@@ -1,0 +1,151 @@
+<div class="card">
+    <h2 class="card-title"><i class="fas fa-users"></i> Gestão de Contatos</h2>
+    <form id="form-cliente" onsubmit="handleSalvarCliente(event)" class="form-container">
+        <div class="form-grid">
+            <div class="form-group col-span-2">
+                <label>Nome / Razão Social *</label>
+                <input type="text" id="cli-nome" class="form-control" required placeholder="Nome completo ou razão social">
+            </div>
+            <div class="form-group">
+                <label>Tipo *</label>
+                <select id="cli-tipo" class="form-control">
+                    <option value="cliente">Cliente</option>
+                    <option value="fornecedor">Fornecedor</option>
+                    <option value="outro">Outro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Documento (CPF/CNPJ)</label>
+                <input type="text" id="cli-doc" class="form-control" placeholder="000.000.000-00 ou 00.000.000/0000-00">
+            </div>
+            <div class="form-group">
+                <label>Telefone *</label>
+                <input type="text" id="cli-tel" class="form-control" required placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-group">
+                <label>E-mail</label>
+                <input type="email" id="cli-email" class="form-control" placeholder="exemplo@email.com">
+            </div>
+            <div class="form-group">
+                <label>Saldo Atual (R$)</label>
+                <input type="number" id="cli-saldo" class="form-control" step="0.01" value="0.00">
+            </div>
+            <div class="form-group col-span-2">
+                <label>Endereço Completo</label>
+                <input type="text" id="cli-endereco" class="form-control" placeholder="Rua, Número, Bairro, Cidade">
+            </div>
+            <div class="form-group">
+                <label>CEP</label>
+                <input type="text" id="cli-cep" class="form-control" placeholder="00000-000">
+            </div>
+            <div class="form-group">
+                <label>Cidade</label>
+                <input type="text" id="cli-cidade" class="form-control" placeholder="Cidade">
+            </div>
+            <div class="form-group">
+                <label>Estado (UF)</label>
+                <input type="text" id="cli-estado" class="form-control" placeholder="SP" maxlength="2">
+            </div>
+        </div>
+        <div class="btn-group">
+            <button type="submit" class="btn-primary" id="btn-save-cli">
+                <i class="fas fa-save"></i> Gravar Contato
+            </button>
+            <button type="button" class="btn-outline" onclick="resetClienteForm()" id="btn-cancel-cli" style="display:none">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="button" class="btn-outline" onclick="salvarEIrParaOrcamento()" id="btn-salvar-orcamento" 
+                    style="background: var(--success-color); color: white; display: none;">
+                <i class="fas fa-file-invoice-dollar"></i> Salvar e Ir para Orçamento
+            </button>
+        </div>
+    </form>
+    
+    <div style="margin-top: 30px;">
+        <div class="form-grid" style="margin-bottom: 20px;">
+            <div class="form-group">
+                <label>Filtrar por Nome</label>
+                <input type="text" id="filtro-nome" class="form-control" placeholder="Digite para filtrar..." 
+                       onkeyup="filtrarClientesLista()">
+            </div>
+            <div class="form-group">
+                <label>Filtrar por Tipo</label>
+                <select id="filtro-tipo" class="form-control" onchange="filtrarClientesLista()">
+                    <option value="">Todos</option>
+                    <option value="cliente">Clientes</option>
+                    <option value="fornecedor">Fornecedores</option>
+                </select>
+            </div>
+        </div>
+        <div id="lista-clientes"></div>
+    </div>
+</div>
+
+<script>
+// Script específico para a página de clientes
+document.addEventListener('DOMContentLoaded', async function() {
+    await renderClientes();
+});
+
+function filtrarClientesLista() {
+    const nomeFiltro = document.getElementById('filtro-nome').value.toLowerCase();
+    const tipoFiltro = document.getElementById('filtro-tipo').value;
+    
+    // Esta função seria implementada no renderClientes para filtrar dinamicamente
+    // Por enquanto, vamos recarregar a lista
+    renderClientesComFiltro(nomeFiltro, tipoFiltro);
+}
+
+async function renderClientesComFiltro(nomeFiltro = '', tipoFiltro = '') {
+    const list = await LocalDB.getAll('clientes');
+    const container = document.getElementById('lista-clientes');
+    if(!container) return;
+    
+    // Aplicar filtros
+    let filteredList = list;
+    if (nomeFiltro) {
+        filteredList = filteredList.filter(c => 
+            c.nome.toLowerCase().includes(nomeFiltro)
+        );
+    }
+    if (tipoFiltro) {
+        filteredList = filteredList.filter(c => c.tipo === tipoFiltro);
+    }
+    
+    container.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Contato</th>
+                    <th>Saldo</th>
+                    <th class="text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${filteredList.map(c => `
+                    <tr>
+                        <td><strong>${c.nome}</strong><br><small>${c.doc || 'Sem documento'}</small></td>
+                        <td><span class="badge ${c.tipo === 'cliente' ? 'badge-success' : 'badge-info'}">${c.tipo}</span></td>
+                        <td>${c.telefone || '-'}<br><small>${c.email || ''}</small></td>
+                        <td style="font-weight: bold; color: ${c.saldo >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}">
+                            R$ ${Number(c.saldo || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td class="text-right">
+                            <button onclick="editarCliente(${c.id})" class="action-btn edit-btn">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="removerCliente(${c.id})" class="action-btn delete-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>`;
+        
+    // Sobrescrever a função renderClientes para usar filtros
+    window.renderClientes = () => renderClientesComFiltro(nomeFiltro, tipoFiltro);
+}
+</script>

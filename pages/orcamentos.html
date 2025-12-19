@@ -1,0 +1,149 @@
+<div class="card no-print">
+    <h2 class="card-title"><i class="fas fa-file-invoice-dollar"></i> Orçamentos Profissionais</h2>
+    
+    <div class="settings-tabs">
+        <button class="tab-btn active" id="btn-tab-novo" onclick="switchBudgetTab('tab-novo-orc', event)">
+            Gerar Novo Orçamento
+        </button>
+        <button class="tab-btn" id="btn-tab-hist" onclick="switchBudgetTab('tab-historico-orc', event); renderHistoricoOrcamentos();">
+            Consultar Histórico (Baixas/Financeiro)
+        </button>
+    </div>
+
+    <div id="tab-novo-orc" class="tab-content active">
+        <div class="form-container">
+            <div class="form-grid">
+                <div class="form-group col-span-2">
+                    <label>Pesquisar Cliente</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="search-cliente" class="form-control" placeholder="Digite nome do cliente..." 
+                               onkeyup="filtrarClientes(this.value)" style="flex: 1;">
+                        <button type="button" class="btn-outline" onclick="abrirCadastroClienteRapido()">
+                            <i class="fas fa-user-plus"></i> Novo Cliente
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Cliente Selecionado</label>
+                    <select id="orc-cliente" class="form-control" required>
+                        <option value="">Selecione o cliente...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Margem de Lucro (%)</label>
+                    <input type="number" id="orc-margem" class="form-control" value="30" 
+                           onchange="renderResumoOrcamento(); atualizarComponentesPreview(document.getElementById('orc-modelo').value);">
+                </div>
+            </div>
+            <div class="form-grid" style="background: #f0f7ff; padding: 25px; border-radius: 12px; border: 1px solid var(--accent-color);">
+                <div class="form-group col-span-2">
+                    <label>Projeto Base</label>
+                    <select id="orc-modelo" class="form-control" 
+                            onchange="toggleGlassSelector(this.value); atualizarComponentesPreview(this.value)">
+                        <option value="">Escolha o modelo...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Largura L (mm)</label>
+                    <input type="number" id="orc-largura" class="form-control" value="1000" 
+                           onchange="atualizarComponentesPreview(document.getElementById('orc-modelo').value)">
+                </div>
+                <div class="form-group">
+                    <label>Altura H (mm)</label>
+                    <input type="number" id="orc-altura" class="form-control" value="1000" 
+                           onchange="atualizarComponentesPreview(document.getElementById('orc-modelo').value)">
+                </div>
+                <div class="form-group">
+                    <label>Cor Alumínio</label>
+                    <select id="orc-cor-alu" class="form-control" 
+                            onchange="atualizarComponentesPreview(document.getElementById('orc-modelo').value)">
+                        <option value="">Selecione a cor...</option>
+                    </select>
+                </div>
+                <div class="form-group" id="glass-selector-container" style="display:none">
+                    <label>Tipo de Vidro</label>
+                    <select id="orc-vidro-tipo" class="form-control">
+                        <option value="">Selecione o Vidro...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Qtd</label>
+                    <input type="number" id="orc-qtd" class="form-control" value="1">
+                </div>
+                <button type="button" class="btn-primary" style="align-self: end;" onclick="adicionarItemOrcamento()">
+                    <i class="fas fa-plus"></i> Incluir no Orçamento
+                </button>
+            </div>
+        </div>
+        
+        <!-- ÁREA DE VISUALIZAÇÃO DOS COMPONENTES DO PRODUTO -->
+        <div id="components-preview" class="components-preview">
+            <h5><i class="fas fa-list"></i> COMPONENTES DO PRODUTO (VISUALIZAÇÃO)</h5>
+            <div id="components-list"></div>
+            <div id="components-subtotal" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e0e0ff; font-weight: bold; display: flex; justify-content: space-between; font-size: 0.9rem;">
+                <span>SUBTOTAL (CUSTO):</span>
+                <span id="components-total-valor" style="color: var(--primary-color);">R$ 0,00</span>
+            </div>
+        </div>
+        
+        <div id="resumo-orcamento-lista"></div>
+        <div id="botoes-finalizacao" style="display:none; text-align: right; margin-top: 25px;">
+            <button class="btn-outline" onclick="loadPage('orcamentos')">Limpar Tudo</button>
+            <button class="btn-primary" onclick="salvarOrcamentoNoBanco()" style="background: var(--info-color);">
+                <i class="fas fa-save"></i> Gravar no Histórico
+            </button>
+            <button class="btn-primary" style="background: var(--success-color);" onclick="prepararPDFNovoOrcamento()">
+                <i class="fas fa-file-pdf"></i> Imprimir PDF de Venda
+            </button>
+        </div>
+    </div>
+
+    <div id="tab-historico-orc" class="tab-content">
+        <div id="lista-historico-orcamentos"></div>
+    </div>
+</div>
+<div id="printable-area"></div>
+
+<script>
+// Script específico para a página de orçamentos
+document.addEventListener('DOMContentLoaded', async function() {
+    await carregarDadosOrcamentos();
+    await renderHistoricoOrcamentos();
+    window.currentBudgetItems = [];
+});
+
+async function carregarDadosOrcamentos() {
+    try {
+        const modelos = await LocalDB.getAll('modelos');
+        const clientes = await LocalDB.getAll('clientes');
+        const cores = await LocalDB.getAll('cores');
+        const vidros = await LocalDB.getAll('vidros_catalogo');
+        
+        // Preencher selects
+        const selectModelo = document.getElementById('orc-modelo');
+        const selectCliente = document.getElementById('orc-cliente');
+        const selectCor = document.getElementById('orc-cor-alu');
+        const selectVidro = document.getElementById('orc-vidro-tipo');
+        
+        // Modelos
+        selectModelo.innerHTML = '<option value="">Escolha o modelo...</option>' +
+            modelos.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+        
+        // Clientes
+        selectCliente.innerHTML = '<option value="">Selecione o cliente...</option>' +
+            clientes.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        
+        // Cores
+        selectCor.innerHTML = '<option value="">Selecione a cor...</option>' +
+            cores.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        
+        // Vidros
+        selectVidro.innerHTML = '<option value="">Selecione o Vidro...</option>' +
+            vidros.map(v => `<option value="${v.id}">${v.nome} - ${v.espessura}mm (${v.cor})</option>`).join('');
+            
+    } catch (error) {
+        console.error('Erro ao carregar dados para orçamentos:', error);
+        showNotification('Erro ao carregar dados para orçamentos', 'error');
+    }
+}
+</script>

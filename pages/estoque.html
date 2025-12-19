@@ -1,0 +1,283 @@
+<div class="card">
+    <h2 class="card-title"><i class="fas fa-boxes"></i> Controle de Estoque Detalhado</h2>
+    
+    <div class="dashboard-grid mb-4">
+        <div class="card stat-card bg-primary-grad">
+            <h3>Valor Total do Estoque</h3>
+            <p style="font-size: 2.5rem; font-weight: 800;" id="valor-total-estoque">R$ 0,00</p>
+        </div>
+        <div class="card stat-card" style="background: linear-gradient(45deg, #2ecc71, #27ae60);">
+            <h3>Total de Itens</h3>
+            <p style="font-size: 2.5rem; font-weight: 800;" id="total-itens">0</p>
+        </div>
+        <div class="card stat-card" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">
+            <h3>Itens em Alerta</h3>
+            <p style="font-size: 2.5rem; font-weight: 800;" id="itens-alerta">0</p>
+        </div>
+    </div>
+    
+    <form id="form-estoque" onsubmit="handleSalvarItem(event)" class="form-container">
+        <h4 class="form-section-title" id="form-title-estoque">Novo Item no Estoque</h4>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Cód. SKU / Ref</label>
+                <input type="text" id="est-codigo-pai" class="form-control" placeholder="Ex: PER-001">
+            </div>
+            <div class="form-group col-span-2">
+                <label>Nome do Produto *</label>
+                <input type="text" id="est-nome" class="form-control" required placeholder="Digite o nome do produto">
+            </div>
+            <div class="form-group">
+                <label>Categoria</label>
+                <select id="est-cat" class="form-control">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Uni. Entrada</label>
+                <select id="est-uni-entrada" class="form-control">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Uni. Saída</label>
+                <select id="est-uni-saida" class="form-control">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Fator de Conversão</label>
+                <input type="number" id="est-fator" class="form-control" step="0.001" value="1.000">
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h5 class="form-section-title">Variações (Cores/Tipos)</h5>
+            <div id="color-rows-container" class="color-rows-container"></div>
+            <button type="button" class="btn-outline btn-dashed" onclick="adicionarLinhaCor()">
+                <i class="fas fa-plus"></i> Adicionar Variação de Cor/Preço
+            </button>
+        </div>
+        
+        <div class="btn-group mt-4">
+            <button type="submit" class="btn-primary" id="btn-save-est">
+                <i class="fas fa-save"></i> Confirmar Alterações
+            </button>
+            <button type="button" class="btn-outline" onclick="resetEstoqueForm()" id="btn-cancel-est" style="display:none">
+                <i class="fas fa-times"></i> Cancelar Edição
+            </button>
+        </div>
+    </form>
+    
+    <div style="margin-top: 30px;">
+        <div class="form-grid" style="margin-bottom: 20px;">
+            <div class="form-group">
+                <label>Filtrar por Nome</label>
+                <input type="text" id="filtro-estoque" class="form-control" placeholder="Digite para filtrar..." 
+                       onkeyup="filtrarEstoqueLista()">
+            </div>
+            <div class="form-group">
+                <label>Filtrar por Categoria</label>
+                <select id="filtro-categoria" class="form-control" onchange="filtrarEstoqueLista()">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Mostrar apenas alertas</label>
+                <select id="filtro-alerta" class="form-control" onchange="filtrarEstoqueLista()">
+                    <option value="todos">Todos</option>
+                    <option value="alerta">Apenas alertas</option>
+                </select>
+            </div>
+        </div>
+        <div id="lista-estoque"></div>
+    </div>
+</div>
+
+<script>
+// Script específico para a página de estoque
+document.addEventListener('DOMContentLoaded', async function() {
+    await carregarDadosEstoque();
+    await adicionarLinhaCor();
+});
+
+async function carregarDadosEstoque() {
+    try {
+        const unidades = await LocalDB.getAll('unidades');
+        const categorias = await LocalDB.getAll('categorias');
+        
+        // Preencher selects
+        const selectUniEnt = document.getElementById('est-uni-entrada');
+        const selectUniSai = document.getElementById('est-uni-saida');
+        const selectCat = document.getElementById('est-cat');
+        const selectFiltroCat = document.getElementById('filtro-categoria');
+        
+        // Unidades
+        const optionsUni = unidades.map(u => `<option value="${u.sigla}">${u.sigla}</option>`).join('');
+        selectUniEnt.innerHTML = '<option value="">Selecione...</option>' + optionsUni;
+        selectUniSai.innerHTML = '<option value="">Selecione...</option>' + optionsUni;
+        
+        // Categorias
+        const optionsCat = categorias.map(c => `<option value="${c.nome}">${c.nome}</option>`).join('');
+        selectCat.innerHTML = '<option value="">Selecione...</option>' + optionsCat;
+        selectFiltroCat.innerHTML = '<option value="">Todas</option>' + optionsCat;
+        
+        // Carregar estoque
+        await atualizarResumoEstoque();
+        await renderEstoqueComFiltro();
+        
+    } catch (error) {
+        console.error('Erro ao carregar dados do estoque:', error);
+        showNotification('Erro ao carregar dados do estoque', 'error');
+    }
+}
+
+async function atualizarResumoEstoque() {
+    const estoque = await LocalDB.getAll('estoque');
+    
+    // Calcular totais
+    let valorTotal = 0;
+    let totalItens = 0;
+    let itensAlerta = 0;
+    
+    estoque.forEach(item => {
+        if (item.grade && item.grade.length > 0) {
+            item.grade.forEach(variacao => {
+                const quantidade = Number(variacao.quantidade) || 0;
+                const valor = Number(variacao.valor) || 0;
+                const minimo = Number(variacao.minimo) || 0;
+                
+                valorTotal += quantidade * valor;
+                totalItens += quantidade;
+                
+                if (quantidade <= minimo && minimo > 0) {
+                    itensAlerta++;
+                }
+            });
+        }
+    });
+    
+    // Atualizar UI
+    document.getElementById('valor-total-estoque').textContent = 
+        `R$ ${valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    document.getElementById('total-itens').textContent = totalItens.toFixed(0);
+    document.getElementById('itens-alerta').textContent = itensAlerta;
+}
+
+async function renderEstoqueComFiltro(nomeFiltro = '', categoriaFiltro = '', apenasAlertas = false) {
+    const list = await LocalDB.getAll('estoque');
+    const container = document.getElementById('lista-estoque');
+    if(!container) return;
+    
+    // Aplicar filtros
+    let filteredList = list;
+    
+    if (nomeFiltro) {
+        const filtroLower = nomeFiltro.toLowerCase();
+        filteredList = filteredList.filter(i => 
+            i.nome.toLowerCase().includes(filtroLower) ||
+            (i.codigo_pai && i.codigo_pai.toLowerCase().includes(filtroLower))
+        );
+    }
+    
+    if (categoriaFiltro) {
+        filteredList = filteredList.filter(i => i.cat === categoriaFiltro);
+    }
+    
+    if (apenasAlertas) {
+        filteredList = filteredList.filter(i => {
+            if (!i.grade || i.grade.length === 0) return false;
+            return i.grade.some(g => {
+                const quantidade = Number(g.quantidade) || 0;
+                const minimo = Number(g.minimo) || 0;
+                return quantidade <= minimo && minimo > 0;
+            });
+        });
+    }
+    
+    let valorTotal = 0;
+    const rows = filteredList.map(i => {
+        let totalItem = 0;
+        let totalValor = 0;
+        let detalhes = '';
+        let temAlerta = false;
+        
+        if (i.grade && i.grade.length > 0) {
+            detalhes = i.grade.map(g => {
+                const quantidade = Number(g.quantidade) || 0;
+                const valor = Number(g.valor) || 0;
+                const minimo = Number(g.minimo) || 0;
+                const valorItem = quantidade * valor;
+                totalItem += quantidade;
+                totalValor += valorItem;
+                
+                // Verificar alerta
+                if (quantidade <= minimo && minimo > 0) {
+                    temAlerta = true;
+                }
+                
+                const quantidadeStyle = quantidade < 0 ? 'color: var(--danger-color); font-weight: bold;' : 
+                                      (quantidade <= minimo && minimo > 0) ? 'color: var(--warning-color); font-weight: bold;' : '';
+                
+                return `
+                    <div style="margin-bottom: 5px; padding: 5px; background: #f8f9fa; border-radius: 5px;">
+                        <strong>${g.cor || 'Sem cor'}:</strong> 
+                        <span style="${quantidadeStyle}">${quantidade.toFixed(2)} ${i.uni_saida}</span> • 
+                        R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/uni • 
+                        <strong>Mín:</strong> ${minimo.toFixed(2)} • 
+                        <strong>Total:</strong> R$ ${valorItem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>`;
+            }).join('');
+        }
+        
+        valorTotal += totalValor;
+        
+        return `<tr ${temAlerta ? 'style="background-color: #fff8e1;"' : ''}>
+            <td>
+                <strong>${i.nome}</strong>
+                ${i.codigo_pai ? `<br><small>Código: ${i.codigo_pai}</small>` : ''}
+                <br><small><span class="badge badge-outline">${i.cat || 'Sem categoria'}</span></small>
+                ${detalhes ? `<div style="margin-top: 10px;">${detalhes}</div>` : ''}
+            </td>
+            <td style="font-weight: bold; color: ${totalItem < 0 ? 'var(--danger-color)' : 'inherit'}">
+                ${totalItem.toFixed(2)} ${i.uni_saida}
+            </td>
+            <td style="font-weight: bold; color: var(--primary-color);">
+                R$ ${totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </td>
+            <td class="text-right">
+                <button onclick="editarEstoque(${i.id})" class="action-btn edit-btn">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="removerEstoque(${i.id})" class="action-btn delete-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+    
+    container.innerHTML = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th>Saldo Total</th>
+                    <th>Valor Total</th>
+                    <th class="text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+        
+    // Atualizar função renderEstoque para usar filtros
+    window.renderEstoque = () => renderEstoqueComFiltro(nomeFiltro, categoriaFiltro, apenasAlertas);
+}
+
+function filtrarEstoqueLista() {
+    const nomeFiltro = document.getElementById('filtro-estoque').value.toLowerCase();
+    const categoriaFiltro = document.getElementById('filtro-categoria').value;
+    const filtroAlerta = document.getElementById('filtro-alerta').value === 'alerta';
+    
+    renderEstoqueComFiltro(nomeFiltro, categoriaFiltro, filtroAlerta);
+}
+</script>

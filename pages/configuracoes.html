@@ -1,0 +1,283 @@
+<div class="card">
+    <h2 class="card-title"><i class="fas fa-cog"></i> Configurações do Sistema</h2>
+    
+    <div class="settings-tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-empresa', event)">Dados da Empresa</button>
+        <button class="tab-btn" onclick="switchTab('tab-vidros', event)">Catálogo de Vidros</button>
+        <button class="tab-btn" onclick="switchTab('tab-unidades', event)">Unidades</button>
+        <button class="tab-btn" onclick="switchTab('tab-categorias', event)">Categorias</button>
+        <button class="tab-btn" onclick="switchTab('tab-cores', event)">Cores</button>
+        <button class="tab-btn" onclick="switchTab('tab-sistema', event)">Sistema</button>
+    </div>
+    
+    <div id="tab-empresa" class="tab-content active">
+        <form onsubmit="handleSalvarEmpresa(event)" class="form-container">
+            <div class="empresa-fields">
+                <h4><i class="fas fa-building"></i> Dados Principais</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Razão Social *</label>
+                        <input type="text" id="emp-razao-social" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nome Fantasia *</label>
+                        <input type="text" id="emp-nome-fantasia" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CNPJ</label>
+                        <input type="text" id="emp-cnpj" class="form-control" placeholder="00.000.000/0000-00">
+                    </div>
+                    <div class="form-group">
+                        <label>Inscrição Estadual</label>
+                        <input type="text" id="emp-inscricao-estadual" class="form-control">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="empresa-fields">
+                <h4><i class="fas fa-map-marker-alt"></i> Endereço</h4>
+                <div class="form-grid">
+                    <div class="form-group col-span-2">
+                        <label>Endereço Completo</label>
+                        <input type="text" id="emp-endereco" class="form-control" placeholder="Rua, Número, Bairro">
+                    </div>
+                    <div class="form-group">
+                        <label>Cidade</label>
+                        <input type="text" id="emp-cidade" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Estado (UF)</label>
+                        <input type="text" id="emp-estado" class="form-control" placeholder="SP" maxlength="2">
+                    </div>
+                    <div class="form-group">
+                        <label>CEP</label>
+                        <input type="text" id="emp-cep" class="form-control" placeholder="00000-000">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="empresa-fields">
+                <h4><i class="fas fa-phone"></i> Contato</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Telefone Principal *</label>
+                        <input type="text" id="emp-telefone" class="form-control" required placeholder="(00) 00000-0000">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone Secundário</label>
+                        <input type="text" id="emp-telefone2" class="form-control" placeholder="(00) 00000-0000">
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="emp-email" class="form-control" placeholder="empresa@exemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Site</label>
+                        <input type="text" id="emp-site" class="form-control" placeholder="https://www.exemplo.com">
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-primary mt-4">
+                <i class="fas fa-save"></i> Salvar Todas as Configurações
+            </button>
+        </form>
+    </div>
+    
+    <div id="tab-vidros" class="tab-content">
+        <div class="form-container">
+            <h4><i class="fas fa-window-maximize"></i> Catálogo de Vidros</h4>
+            <p style="color: #666; margin-bottom: 20px;">Cadastre os tipos de vidros disponíveis para uso nos orçamentos.</p>
+            
+            <form onsubmit="handleSalvarVidroCatalogo(event)" class="form-grid">
+                <input type="text" id="vid-nome" class="form-control" placeholder="Tipo do Vidro (ex: Laminado)" required>
+                <input type="number" id="vid-esp" class="form-control" placeholder="Espessura (mm)" required min="1">
+                <input type="text" id="vid-cor" class="form-control" placeholder="Cor (ex: Incolor)" required>
+                <input type="number" id="vid-preco" class="form-control" placeholder="Preço m² (R$)" step="0.01" required min="0.01">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-plus"></i> Adicionar Vidro
+                </button>
+            </form>
+            
+            <div id="lista-vidros-catalogo" class="mt-4"></div>
+        </div>
+    </div>
+    
+    <div id="tab-unidades" class="tab-content">
+        <div class="form-container">
+            <h4><i class="fas fa-balance-scale"></i> Unidades de Medida</h4>
+            <p style="color: #666; margin-bottom: 20px;">Cadastre as unidades de medida utilizadas no estoque.</p>
+            
+            <form onsubmit="handleSalvarUnidade(event)" class="form-grid">
+                <input type="text" id="uni-sigla" class="form-control" placeholder="Ex: BARRA, METRO, UNIDADE" required>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-plus"></i> Adicionar Unidade
+                </button>
+            </form>
+            
+            <div id="lista-unidades" class="mt-4"></div>
+        </div>
+    </div>
+    
+    <div id="tab-categorias" class="tab-content">
+        <div class="form-container">
+            <h4><i class="fas fa-tags"></i> Categorias de Produtos</h4>
+            <p style="color: #666; margin-bottom: 20px;">Cadastre categorias para organizar os produtos do estoque.</p>
+            
+            <form onsubmit="handleSalvarCategoria(event)" class="form-grid">
+                <input type="text" id="cat-nome" class="form-control" placeholder="Ex: Acessórios, Perfis, Ferragens" required>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-plus"></i> Adicionar Categoria
+                </button>
+            </form>
+            
+            <div id="lista-categorias" class="mt-4"></div>
+        </div>
+    </div>
+    
+    <div id="tab-cores" class="tab-content">
+        <div class="form-container">
+            <h4><i class="fas fa-palette"></i> Cores de Alumínio</h4>
+            <p style="color: #666; margin-bottom: 20px;">Cadastre as cores disponíveis para os perfis de alumínio.</p>
+            
+            <form onsubmit="handleSalvarCor(event)" class="form-grid">
+                <input type="text" id="cor-nome" class="form-control" placeholder="Ex: Bronze, Branco, Preto Fosco" required>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-plus"></i> Adicionar Cor
+                </button>
+            </form>
+            
+            <div id="lista-cores" class="mt-4"></div>
+        </div>
+    </div>
+    
+    <div id="tab-sistema" class="tab-content">
+        <div class="form-container">
+            <h4><i class="fas fa-sliders-h"></i> Configurações do Sistema</h4>
+            
+            <div class="empresa-fields">
+                <h5><i class="fas fa-percentage"></i> Margens e Preços</h5>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Margem de Lucro Padrão (%)</label>
+                        <input type="number" id="emp-margem-padrao" class="form-control" value="30" min="0" max="100" step="0.1">
+                        <small style="color: #666;">Margem aplicada por padrão em novos orçamentos</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Prazo de Validade Orçamento (dias)</label>
+                        <input type="number" id="emp-prazo-validade" class="form-control" value="10" min="1" max="90">
+                        <small style="color: #666;">Prazo padrão de validade dos orçamentos</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="empresa-fields">
+                <h5><i class="fas fa-sticky-note"></i> Observações Padrão</h5>
+                <div class="form-grid">
+                    <div class="form-group col-span-2">
+                        <label>Observação Padrão em Orçamentos</label>
+                        <textarea id="emp-obs-padrao" class="form-control" rows="4" 
+                                  placeholder="Observações que aparecerão em todos os orçamentos (ex: Prazo de entrega, forma de pagamento, garantia, etc.)"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="empresa-fields">
+                <h5><i class="fas fa-database"></i> Banco de Dados</h5>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Versão do Banco de Dados</label>
+                        <input type="text" class="form-control" value="OficinaDB_v2 (v12)" disabled style="background: #f5f5f5;">
+                    </div>
+                    <div class="form-group">
+                        <label>Limpar Cache</label>
+                        <button type="button" class="btn-outline w-100" onclick="limparCache()">
+                            <i class="fas fa-broom"></i> Limpar Cache do Navegador
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" class="btn-primary mt-4" onclick="salvarConfigSistema()">
+                <i class="fas fa-save"></i> Salvar Configurações do Sistema
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Script específico para a página de configurações
+document.addEventListener('DOMContentLoaded', async function() {
+    await carregarConfiguracoes();
+});
+
+async function carregarConfiguracoes() {
+    try {
+        // Carregar dados da empresa
+        const empresa = (await LocalDB.getAll('empresa'))[0] || {};
+        
+        // Preencher formulário da empresa
+        document.getElementById('emp-razao-social').value = empresa.razao_social || '';
+        document.getElementById('emp-nome-fantasia').value = empresa.nome_fantasia || empresa.nome || '';
+        document.getElementById('emp-cnpj').value = empresa.cnpj || '';
+        document.getElementById('emp-inscricao-estadual').value = empresa.inscricao_estadual || '';
+        document.getElementById('emp-endereco').value = empresa.endereco || '';
+        document.getElementById('emp-cidade').value = empresa.cidade || '';
+        document.getElementById('emp-estado').value = empresa.estado || '';
+        document.getElementById('emp-cep').value = empresa.cep || '';
+        document.getElementById('emp-telefone').value = empresa.telefone || '';
+        document.getElementById('emp-telefone2').value = empresa.telefone2 || '';
+        document.getElementById('emp-email').value = empresa.email || '';
+        document.getElementById('emp-site').value = empresa.site || '';
+        document.getElementById('emp-margem-padrao').value = empresa.margem_padrao || 30;
+        document.getElementById('emp-prazo-validade').value = empresa.prazo_validade || 10;
+        document.getElementById('emp-obs-padrao').value = empresa.obs_padrao || '';
+        
+        // Carregar outros dados
+        await renderVidrosCatalogo();
+        await renderUnidades();
+        await renderCategorias();
+        await renderCores();
+        
+    } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+        showNotification('Erro ao carregar configurações', 'error');
+    }
+}
+
+async function salvarConfigSistema() {
+    try {
+        const empresa = (await LocalDB.getAll('empresa'))[0] || {};
+        
+        empresa.margem_padrao = Number(document.getElementById('emp-margem-padrao').value) || 30;
+        empresa.prazo_validade = Number(document.getElementById('emp-prazo-validade').value) || 10;
+        empresa.obs_padrao = document.getElementById('emp-obs-padrao').value;
+        
+        await LocalDB.setSingleton('empresa', empresa);
+        showNotification('Configurações do sistema salvas com sucesso!', 'success');
+        
+        // Atualizar margem padrão no formulário de orçamentos se estiver na página
+        if (document.getElementById('orc-margem')) {
+            document.getElementById('orc-margem').value = empresa.margem_padrao;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar configurações do sistema:', error);
+        showNotification('Erro ao salvar configurações do sistema', 'error');
+    }
+}
+
+function limparCache() {
+    if (confirm("Deseja limpar o cache do navegador? Isso pode melhorar o desempenho.")) {
+        if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+                cacheNames.forEach(cacheName => {
+                    caches.delete(cacheName);
+                });
+                showNotification('Cache limpo com sucesso!', 'success');
+            });
+        } else {
+            showNotification('Cache não disponível neste navegador.', 'info');
+        }
+    }
+}
+</script>
